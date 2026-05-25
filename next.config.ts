@@ -1,8 +1,11 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactCompiler: true,
-};
+  images: {
+    // Allow images from public/ to be served without an external domain config
+    unoptimized: false,
+  },
+}
 
-export default nextConfig;
+export default nextConfig
