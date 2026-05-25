@@ -1,4 +1,5 @@
 import { QRDisplay } from '@/components/QRDisplay'
+import { ResetButton } from '@/components/ResetButton'
 
 export default function PresentPage() {
   return (
@@ -9,6 +10,7 @@ export default function PresentPage() {
           <h1 className="text-3xl font-semibold tracking-tight">Real or Fake?</h1>
         </div>
         <QRDisplay />
+        <ResetButton />
       </div>
     </main>
   )
