@@ -29,6 +29,7 @@ export function LiveGraph() {
   const [data, setData] = useState<DataPoint[]>([])
   const [total, setTotal] = useState(0)
   const [live, setLive] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const currentPct = data.length > 0 ? data[data.length - 1].pct : null
   const isAbove50 = currentPct !== null && currentPct >= 50
@@ -36,10 +37,15 @@ export function LiveGraph() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const { data: rows } = await supabase
+      const { data: rows, error: fetchError } = await supabase
         .from('responses')
         .select('all_correct, created_at')
         .order('created_at', { ascending: true })
+
+      if (fetchError) {
+        setError(fetchError.message)
+        return
+      }
 
       setData(rows && rows.length > 0 ? buildDataPoints(rows) : [])
       setTotal(rows?.length ?? 0)
@@ -53,39 +59,47 @@ export function LiveGraph() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'responses' },
         async () => {
-          const { data: rows } = await supabase
+          const { data: rows, error: fetchError } = await supabase
             .from('responses')
             .select('all_correct, created_at')
             .order('created_at', { ascending: true })
 
-          if (rows) {
-            setData(buildDataPoints(rows))
-            setTotal(rows.length)
-          }
+          if (fetchError) { setError(fetchError.message); return }
+          if (rows) { setData(buildDataPoints(rows)); setTotal(rows.length) }
         }
       )
       .on(
         'postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'responses' },
         async () => {
-          // Refetch after reset — will return 0 rows
-          const { data: rows } = await supabase
+          const { data: rows, error: fetchError } = await supabase
             .from('responses')
             .select('all_correct, created_at')
             .order('created_at', { ascending: true })
 
+          if (fetchError) { setError(fetchError.message); return }
           setData(rows && rows.length > 0 ? buildDataPoints(rows) : [])
           setTotal(rows?.length ?? 0)
         }
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') setLive(true)
+        if (status === 'CHANNEL_ERROR') setError('Realtime connection failed')
       })
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => { supabase.removeChannel(channel) }
   }, [])
+
+  if (error) {
+    return (
+      <div className="w-full py-10 flex flex-col items-center gap-3 text-center">
+        <p className="text-xs text-red-400 font-mono bg-red-50 border border-red-100 rounded-lg px-4 py-3 max-w-xs break-all">
+          {error}
+        </p>
+        <p className="text-xs text-gray-400">Check Supabase connection</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full space-y-8">
@@ -113,19 +127,12 @@ export function LiveGraph() {
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-
             <XAxis
               dataKey="index"
               tick={{ fill: '#9ca3af', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
-              label={{
-                value: 'responses',
-                position: 'insideBottomRight',
-                offset: -4,
-                fill: '#d1d5db',
-                fontSize: 11,
-              }}
+              label={{ value: 'responses', position: 'insideBottomRight', offset: -4, fill: '#d1d5db', fontSize: 11 }}
             />
             <YAxis
               domain={[0, 100]}
@@ -135,40 +142,14 @@ export function LiveGraph() {
               tickFormatter={(v) => `${v}%`}
               width={40}
             />
-
-            <ReferenceLine
-              y={50}
-              stroke="#e5e7eb"
-              strokeDasharray="6 4"
-              label={{ value: '50%', position: 'insideTopLeft', fill: '#d1d5db', fontSize: 11 }}
-            />
-
+            <ReferenceLine y={50} stroke="#e5e7eb" strokeDasharray="6 4" label={{ value: '50%', position: 'insideTopLeft', fill: '#d1d5db', fontSize: 11 }} />
             <Tooltip
-              contentStyle={{
-                background: '#fff',
-                border: '1px solid #f3f4f6',
-                borderRadius: '8px',
-                fontSize: 12,
-                color: '#111',
-                boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
-              }}
+              contentStyle={{ background: '#fff', border: '1px solid #f3f4f6', borderRadius: '8px', fontSize: 12, color: '#111', boxShadow: '0 1px 6px rgba(0,0,0,0.08)' }}
               formatter={(value) => [`${value}%`, 'Correct']}
               labelFormatter={(label) => `Response #${label}`}
               cursor={{ stroke: '#e5e7eb', strokeWidth: 1 }}
             />
-
-            <Area
-              type="monotone"
-              dataKey="pct"
-              stroke={color}
-              strokeWidth={2.5}
-              fill="url(#areaFill)"
-              dot={false}
-              activeDot={{ r: 4, fill: color, stroke: '#fff', strokeWidth: 2 }}
-              isAnimationActive
-              animationDuration={400}
-              animationEasing="ease-out"
-            />
+            <Area type="monotone" dataKey="pct" stroke={color} strokeWidth={2.5} fill="url(#areaFill)" dot={false} activeDot={{ r: 4, fill: color, stroke: '#fff', strokeWidth: 2 }} isAnimationActive animationDuration={400} animationEasing="ease-out" />
           </AreaChart>
         </ResponsiveContainer>
       ) : (
@@ -180,9 +161,7 @@ export function LiveGraph() {
 
       {/* Live indicator */}
       <div className="flex items-center gap-2">
-        <span
-          className={`w-2 h-2 rounded-full ${live ? 'bg-black animate-pulse' : 'bg-gray-300'}`}
-        />
+        <span className={`w-2 h-2 rounded-full ${live ? 'bg-black animate-pulse' : 'bg-gray-300'}`} />
         <span className="text-xs text-gray-400">{live ? 'Live' : 'Connecting…'}</span>
       </div>
     </div>

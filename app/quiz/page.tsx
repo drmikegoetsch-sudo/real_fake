@@ -12,6 +12,7 @@ export default function QuizPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<boolean[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const handleSwipe = async (direction: 'left' | 'right') => {
     const answer = direction === 'right'
@@ -23,13 +24,21 @@ export default function QuizPage() {
     } else {
       setSubmitting(true)
       try {
-        await fetch('/api/submit', {
+        const res = await fetch('/api/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ answers: newAnswers }),
         })
-      } finally {
+        if (!res.ok) {
+          const body = await res.json()
+          setSubmitError(body.error || 'Submit failed')
+          setSubmitting(false)
+          return
+        }
         router.push('/done')
+      } catch (e) {
+        setSubmitError('Network error — check connection')
+        setSubmitting(false)
       }
     }
   }
@@ -101,6 +110,17 @@ export default function QuizPage() {
       {submitting && (
         <div className="fixed inset-0 bg-white/80 flex items-center justify-center">
           <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {submitError && (
+        <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <p className="text-sm text-red-500 font-mono bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+            {submitError}
+          </p>
+          <button onClick={() => setSubmitError(null)} className="text-xs text-gray-400 underline">
+            Try again
+          </button>
         </div>
       )}
     </main>
