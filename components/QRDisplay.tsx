@@ -2,7 +2,7 @@
 
 import { QRCodeSVG } from 'qrcode.react'
 
-const URL = 'https://real-fake-mqyqgeox9-mikegoetsch-soteranalytis-projects.vercel.app/'
+const URL = 'https://real-fake-gold.vercel.app/'
 
 export function QRDisplay() {
   return (
