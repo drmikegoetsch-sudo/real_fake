@@ -1,5 +1,6 @@
 import { LiveGraph } from '@/components/LiveGraph'
 import { QRDisplay } from '@/components/QRDisplay'
+import { ResetButton } from '@/components/ResetButton'
 
 export default function PresentPage() {
   return (
@@ -15,11 +16,14 @@ export default function PresentPage() {
           <QRDisplay />
         </div>
 
-        {/* Divider */}
+        {/* Right: Live Graph */}
         <div className="border-l border-gray-100 pl-20">
-          <div className="mb-8">
-            <p className="text-xs tracking-[0.2em] text-gray-400 uppercase mb-1">Results</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Live</h2>
+          <div className="mb-8 flex items-end justify-between">
+            <div>
+              <p className="text-xs tracking-[0.2em] text-gray-400 uppercase mb-1">Results</p>
+              <h2 className="text-2xl font-semibold tracking-tight">Live</h2>
+            </div>
+            <ResetButton />
           </div>
           <LiveGraph />
         </div>

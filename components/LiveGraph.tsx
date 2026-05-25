@@ -41,10 +41,8 @@ export function LiveGraph() {
         .select('all_correct, created_at')
         .order('created_at', { ascending: true })
 
-      if (rows && rows.length > 0) {
-        setData(buildDataPoints(rows))
-        setTotal(rows.length)
-      }
+      setData(rows && rows.length > 0 ? buildDataPoints(rows) : [])
+      setTotal(rows?.length ?? 0)
     }
 
     fetchAll()
@@ -55,7 +53,6 @@ export function LiveGraph() {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'responses' },
         async () => {
-          // Refetch on each insert — clean and accurate for room-scale audiences
           const { data: rows } = await supabase
             .from('responses')
             .select('all_correct, created_at')
@@ -65,6 +62,20 @@ export function LiveGraph() {
             setData(buildDataPoints(rows))
             setTotal(rows.length)
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'responses' },
+        async () => {
+          // Refetch after reset — will return 0 rows
+          const { data: rows } = await supabase
+            .from('responses')
+            .select('all_correct, created_at')
+            .order('created_at', { ascending: true })
+
+          setData(rows && rows.length > 0 ? buildDataPoints(rows) : [])
+          setTotal(rows?.length ?? 0)
         }
       )
       .subscribe((status) => {
